@@ -412,7 +412,7 @@ Result:
 The OData service is not expected to return any response payload (HTTP status code to 204 – no content).
 
 
-## Delete Existing Book
+## Request: Delete Existing Book
 
 With this request we can remove data record of an existing book.
 
