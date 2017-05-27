@@ -6,6 +6,11 @@ The implementation of the OData service is based on the [Apache Olingo OData 4.0
 
 Afterwards the Web Application is deployed on a Java EE server, the OData service can be invoked from a browser or a http client and will provide the data according to the [OData V4 specification](http://www.odata.org/documentation). The service will display a list of books and a few properties that describe each book.
 
+Visit my blog for more background informations about this project.
+
+[OData V4 – Implementierung eines Services unter Java EE mittels Apache Olingo](https://www.blogging-it.com/odata-v4-implementierung-eines-services-unter-java-ee-mittels-apache-olingo/programmierung/java/javaee.html) (german)
+
+
 # Infrastructure
 
 - Java 1.8
