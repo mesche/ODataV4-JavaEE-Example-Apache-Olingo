@@ -2,9 +2,10 @@ package com.bloggingit.odata.olingo.v4.service;
 
 import com.bloggingit.odata.model.BaseEntity;
 import com.bloggingit.odata.exception.EntityDataException;
-import com.bloggingit.odata.olingo.mapper.OlingoEntityMapper;
-import com.bloggingit.odata.olingo.meta.MetaEntityData;
-import com.bloggingit.odata.olingo.meta.MetaEntityPropertyData;
+import com.bloggingit.odata.olingo.v4.mapper.OlingoObjectMapper;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyData;
+import com.bloggingit.odata.olingo.v4.mapper.OlingoPropertyMapper;
 import com.bloggingit.odata.storage.InMemoryDataStorage;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -33,17 +34,17 @@ public class OlingoDataService implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    public <T> EntityCollection getEntityDataList(MetaEntityData<T> metaEntityData) {
-        List<T> entityDataList = InMemoryDataStorage.getDataListByBaseEntityClass(metaEntityData.getEntityClass());
+    public <T> EntityCollection getEntityDataList(EntityMetaData<T> entityMetaData) {
+        List<T> entityDataList = InMemoryDataStorage.getDataListByBaseEntityClass(entityMetaData.getEntityClass());
 
-        return OlingoEntityMapper.mapObjectEntitiesToOlingoEntityCollection(entityDataList, metaEntityData);
+        return OlingoObjectMapper.mapObjectEntitiesToOlingoEntityCollection(entityDataList, entityMetaData);
 
     }
 
-    public <T> Entity getEntityData(MetaEntityData<T> metaEntityData, List<UriParameter> keyParams) {
+    public <T> Entity getEntityData(EntityMetaData<T> entityMetaData, List<UriParameter> keyParams) {
         long id = Long.parseLong(keyParams.get(0).getText());
-        T baseEntity = InMemoryDataStorage.getDataByClassAndId(metaEntityData.getEntityClass(), id);
-        return (baseEntity != null) ? OlingoEntityMapper.mapObjEntityToOlingoEntity(baseEntity, metaEntityData) : null;
+        T baseEntity = InMemoryDataStorage.getDataByClassAndId(entityMetaData.getEntityClass(), id);
+        return (baseEntity != null) ? OlingoObjectMapper.mapObjEntityToOlingoEntity(baseEntity, entityMetaData) : null;
     }
 
     @SuppressWarnings("unchecked")
@@ -53,9 +54,9 @@ public class OlingoDataService implements Serializable {
         InMemoryDataStorage.deleteDataByClassAndId((Class<BaseEntity>) entityClass, id);
     }
 
-    public <T> Entity createEntityData(MetaEntityData<T> metaEntityData, Entity requestEntity) throws ODataApplicationException {
+    public <T> Entity createEntityData(EntityMetaData<T> entityMetaData, Entity requestEntity) throws ODataApplicationException {
 
-        T baseEntity = OlingoEntityMapper.mapOlingoEntityToObjectEntity(metaEntityData, requestEntity);
+        T baseEntity = OlingoObjectMapper.mapOlingoEntityToObjectEntity(entityMetaData, requestEntity);
         T newBaseEntity;
         try {
             newBaseEntity = InMemoryDataStorage.createEntity(baseEntity);
@@ -64,10 +65,10 @@ public class OlingoDataService implements Serializable {
                     HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH, ex);
         }
 
-        return OlingoEntityMapper.mapObjEntityToOlingoEntity(newBaseEntity, metaEntityData);
+        return OlingoObjectMapper.mapObjEntityToOlingoEntity(newBaseEntity, entityMetaData);
     }
 
-    public void updateEntityData(MetaEntityData<?> metaEntityData, List<UriParameter> keyParams, Entity entity, HttpMethod httpMethod) throws ODataApplicationException {
+    public void updateEntityData(EntityMetaData<?> entityMetaData, List<UriParameter> keyParams, Entity entity, HttpMethod httpMethod) throws ODataApplicationException {
         long id = Long.parseLong(keyParams.get(0).getText());
 
         Map<String, Object> newPropertiesAndValues = new HashMap<>();
@@ -77,14 +78,18 @@ public class OlingoDataService implements Serializable {
         //in case of PUT, the existing property is set to null
         boolean nullableUnkownProperties = (httpMethod.equals(HttpMethod.PUT));
 
-        List<MetaEntityPropertyData> metaProperties = metaEntityData.getProperties();
+        List<EntityMetaPropertyData> metaProperties = entityMetaData.getProperties();
 
 
         metaProperties.forEach((metaProp) -> {
             Property newProperty = entity.getProperty(metaProp.getName());
 
-            if (newProperty != null && !metaProp.isKey()) { // the request payload might not consider ALL properties, so it can be null
-                newPropertiesAndValues.put(metaProp.getFieldName(), newProperty.getValue());
+            // the request payload might not consider ALL properties, so it can be null
+            if (newProperty != null && !metaProp.isKey()) {
+
+                Object val = OlingoPropertyMapper.mapOlingoPropertyToObjPropertyValue(newProperty, metaProp.getFieldType());
+
+                newPropertiesAndValues.put(metaProp.getFieldName(), val);
             } else if (nullableUnkownProperties && !metaProp.isKey()) {
                 // if a property has NOT been added to the request payload
                 // depending on the HttpMethod, our behavior is different
@@ -95,7 +100,7 @@ public class OlingoDataService implements Serializable {
         });
 
         try {
-            InMemoryDataStorage.updateEntity(metaEntityData.getEntityClass(), id, newPropertiesAndValues, nullableUnkownProperties);
+            InMemoryDataStorage.updateEntity(entityMetaData.getEntityClass(), id, newPropertiesAndValues, nullableUnkownProperties);
         } catch (EntityDataException ex) {
             throw new ODataApplicationException("Entity not found",
                     HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH, ex);

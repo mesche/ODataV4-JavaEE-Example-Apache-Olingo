@@ -1,7 +1,7 @@
 package com.bloggingit.odata.olingo.v4.processor;
 
-import com.bloggingit.odata.olingo.meta.MetaEntityData;
-import com.bloggingit.odata.olingo.meta.MetaEntityDataCollection;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
 import com.bloggingit.odata.olingo.v4.service.OlingoDataService;
 import com.bloggingit.odata.olingo.v4.util.OlingoUtil;
 import java.io.InputStream;
@@ -11,9 +11,7 @@ import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.format.ContentType;
-import org.apache.olingo.commons.api.http.HttpHeader;
 import org.apache.olingo.commons.api.http.HttpMethod;
-import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.ODataLibraryException;
@@ -37,17 +35,17 @@ import org.apache.olingo.server.api.uri.UriResourceEntitySet;
  *
  * This is the case if an Entity is requested by the user.
  */
-public class DataEntityProcessor implements EntityProcessor {
+public class DataEntityProcessor extends AbstractEntityMetaDataProcessor implements EntityProcessor {
 
     private OData odata;
     private ServiceMetadata serviceMetadata;
-    private final MetaEntityDataCollection metaEntityDataCollection;
+    private final EntityMetaDataContainer entityMetaDataCollection;
 
     private final OlingoDataService dataService;
 
-    public DataEntityProcessor(OlingoDataService dataService, MetaEntityDataCollection metaEntityDataCollection) {
+    public DataEntityProcessor(OlingoDataService dataService, EntityMetaDataContainer entityMetaDataCollection) {
         this.dataService = dataService;
-        this.metaEntityDataCollection = metaEntityDataCollection;
+        this.entityMetaDataCollection = entityMetaDataCollection;
     }
 
     @Override
@@ -66,7 +64,7 @@ public class DataEntityProcessor implements EntityProcessor {
         EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
 
         // 2. retrieve the data from backend
-        MetaEntityData<?> meta = this.metaEntityDataCollection.getMetaEntityDataByTypeSetName(edmEntitySet.getName());
+        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
 
         List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
         Entity entity = this.dataService.getEntityData(meta, keyPredicates);
@@ -83,9 +81,7 @@ public class DataEntityProcessor implements EntityProcessor {
         InputStream entityStream = serializerResult.getContent();
 
         //4. configure the response object
-        response.setContent(entityStream);
-        response.setStatusCode(HttpStatusCode.OK.getStatusCode());
-        response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
+        setResponseContentAndOkStatus(response, entityStream, responseFormat);
     }
 
     @Override
@@ -104,7 +100,7 @@ public class DataEntityProcessor implements EntityProcessor {
         DeserializerResult result = deserializer.entity(requestInputStream, edmEntityType);
         Entity requestEntity = result.getEntity();
         // 2.2 do the creation in backend, which returns the newly created entity
-        MetaEntityData<?> meta = this.metaEntityDataCollection.getMetaEntityDataByTypeSetName(edmEntitySet.getName());
+        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
 
         Entity createdEntity = this.dataService.createEntityData(meta, requestEntity);
 
@@ -117,9 +113,7 @@ public class DataEntityProcessor implements EntityProcessor {
         SerializerResult serializedResponse = serializer.entity(serviceMetadata, edmEntityType, createdEntity, options);
 
         //4. configure the response object
-        response.setContent(serializedResponse.getContent());
-        response.setStatusCode(HttpStatusCode.CREATED.getStatusCode());
-        response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
+        setResponseContentAndOkStatus(response, serializedResponse.getContent(), responseFormat);
     }
 
     @Override
@@ -144,12 +138,12 @@ public class DataEntityProcessor implements EntityProcessor {
         // Note that this updateEntity()-method is invoked for both PUT or PATCH operations
         HttpMethod httpMethod = request.getMethod();
 
-        MetaEntityData<?> meta = this.metaEntityDataCollection.getMetaEntityDataByTypeSetName(edmEntitySet.getName());
+        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
 
         this.dataService.updateEntityData(meta, keyPredicates, requestEntity, httpMethod);
 
         //3. configure the response object
-        response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());
+        setResponseNoContentStatus(response);
     }
 
     @Override
@@ -162,13 +156,13 @@ public class DataEntityProcessor implements EntityProcessor {
         EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
 
         // 2. delete the data in backend
-        MetaEntityData<?> meta = this.metaEntityDataCollection.getMetaEntityDataByTypeSetName(edmEntitySet.getName());
+        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
 
         List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
         this.dataService.deleteEntityData(meta.getEntityClass(), keyPredicates);
 
         //3. configure the response object
-        response.setStatusCode(HttpStatusCode.NO_CONTENT.getStatusCode());
+        setResponseNoContentStatus(response);
     }
 
 }

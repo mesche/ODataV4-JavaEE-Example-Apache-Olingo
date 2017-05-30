@@ -1,7 +1,8 @@
 package com.bloggingit.odata.olingo.v4.processor;
 
-import com.bloggingit.odata.olingo.meta.MetaEntityData;
-import com.bloggingit.odata.olingo.meta.MetaEntityDataCollection;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
+import com.bloggingit.odata.olingo.v4.callback.ODataErrorCallback;
 import com.bloggingit.odata.olingo.v4.service.OlingoDataService;
 import java.util.List;
 
@@ -10,8 +11,6 @@ import org.apache.olingo.commons.api.data.EntityCollection;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
 import org.apache.olingo.commons.api.format.ContentType;
-import org.apache.olingo.commons.api.http.HttpHeader;
-import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.ODataRequest;
@@ -32,17 +31,17 @@ import org.apache.olingo.server.api.uri.UriResourceEntitySet;
  *
  * This is the case if an EntitySet is requested by the user.
  */
-public class DataCollectionProcessor implements EntityCollectionProcessor {
+public class DataCollectionProcessor extends AbstractEntityMetaDataProcessor implements EntityCollectionProcessor {
 
     private OData odata;
     private ServiceMetadata serviceMetadata;
-    private final MetaEntityDataCollection metaEntityDataCollection;
+    private final EntityMetaDataContainer entityMetaDataCollection;
 
     private final OlingoDataService dataService;
 
-    public DataCollectionProcessor(OlingoDataService dataService, MetaEntityDataCollection metaEntityDataCollection) {
+    public DataCollectionProcessor(OlingoDataService dataService, EntityMetaDataContainer entityMetaDataCollection) {
         this.dataService = dataService;
-        this.metaEntityDataCollection = metaEntityDataCollection;
+        this.entityMetaDataCollection = entityMetaDataCollection;
     }
 
     @Override
@@ -61,7 +60,7 @@ public class DataCollectionProcessor implements EntityCollectionProcessor {
 
         // 2nd: fetch the data from backend for this requested EntitySetName 
         // it has to be delivered as EntitySet object
-        MetaEntityData<?> meta = this.metaEntityDataCollection.getMetaEntityDataByTypeSetName(edmEntitySet.getName());
+        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
 
         EntityCollection entitySet = dataService.getEntityDataList(meta);
 
@@ -74,12 +73,15 @@ public class DataCollectionProcessor implements EntityCollectionProcessor {
 
         final String id = request.getRawBaseUri() + "/" + edmEntitySet.getName();
         EntityCollectionSerializerOptions opts
-                = EntityCollectionSerializerOptions.with().id(id).contextURL(contextUrl).build();
+                = EntityCollectionSerializerOptions
+                        .with()
+                        .id(id)
+                        .writeContentErrorCallback(new ODataErrorCallback())
+                        .contextURL(contextUrl)
+                        .build();
         SerializerResult serializedContent = serializer.entityCollection(serviceMetadata, edmEntityType, entitySet, opts);
 
         // Finally: configure the response object: set the body, headers and status code
-        response.setContent(serializedContent.getContent());
-        response.setStatusCode(HttpStatusCode.OK.getStatusCode());
-        response.setHeader(HttpHeader.CONTENT_TYPE, responseFormat.toContentTypeString());
+        setResponseContentAndOkStatus(response, serializedContent.getContent(), responseFormat);
     }
 }

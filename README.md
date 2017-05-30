@@ -354,6 +354,13 @@ Request Body:
 }
 ```
 
+```json
+{
+    "name": "Author New",
+    "gender": "FEMALE"
+}
+```
+
 Result:
 
 The result is a response with the details of the new book with the new assigned id.

@@ -21,6 +21,7 @@ import com.bloggingit.odata.olingo.v4.service.OlingoDataService;
 import javax.inject.Inject;
 import javax.servlet.Servlet;
 import org.apache.olingo.commons.api.edmx.EdmxReference;
+import org.apache.olingo.server.api.debug.DefaultDebugSupport;
 
 /**
  * This {@link Servlet} provides the OData service.
@@ -56,12 +57,11 @@ public class ODataDemoServlet extends HttpServlet {
         super.init(config);
 
         this.edmProvider = new AnnotationEdmProvider(SERVICE_NAMESPACE, EDM_CONTAINER_NAME, BASE_MODEL_PACKAGE);
-        this.entityCollectionProcessor = new DataCollectionProcessor(dataService, this.edmProvider.getMetaEntityDataCollection());
-        this.entityProcessor = new DataEntityProcessor(dataService, this.edmProvider.getMetaEntityDataCollection());
-        // this.entityDataPrimitiveProcessor = new DataPrimitiveProcessor(dataService, this.edmProvider.getMetaEntityDataCollection());
-        this.entityDataPrimitiveValueProcessor = new DataPrimitiveValueProcessor(dataService, this.edmProvider.getMetaEntityDataCollection());
+        this.entityCollectionProcessor = new DataCollectionProcessor(dataService, this.edmProvider.getEntityMetaDataContainer());
+        this.entityProcessor = new DataEntityProcessor(dataService, this.edmProvider.getEntityMetaDataContainer());
+        // this.entityDataPrimitiveProcessor = new DataPrimitiveProcessor(dataService, this.edmProvider.getEntityMetaDataCollection());
+        this.entityDataPrimitiveValueProcessor = new DataPrimitiveValueProcessor(dataService, this.edmProvider.getEntityMetaDataContainer());
     }
-
 
     @Override
     protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
@@ -75,6 +75,11 @@ public class ODataDemoServlet extends HttpServlet {
         //handler.register(entityDataPrimitiveProcessor);
         handler.register(entityDataPrimitiveValueProcessor);
 
+        //run service url query option odata-debug=json to return detailed error information in json format for each request.
+        //http://olingo.apache.org/doc/odata2/tutorials/debug.html
+        handler.register(new DefaultDebugSupport());
+
         handler.process(req, resp);
+
     }
 }

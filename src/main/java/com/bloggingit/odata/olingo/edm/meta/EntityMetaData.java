@@ -1,8 +1,8 @@
-package com.bloggingit.odata.olingo.meta;
+package com.bloggingit.odata.olingo.edm.meta;
 
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
-import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
  *
@@ -11,7 +11,7 @@ import org.apache.olingo.commons.api.edm.FullQualifiedName;
  * @param <T> the generic type of the entity data
  */
 @Getter
-public class MetaEntityData<T> {
+public class EntityMetaData<T> {
 
     /**
      * The suffix for a OData typeset
@@ -33,24 +33,31 @@ public class MetaEntityData<T> {
      */
     private final String entityTypeName;
 
-    /**
-     * The full qualified name of the entity type.
-     */
-    private final FullQualifiedName entityTypeNameFQ;
+    private final boolean isEntitySet;
 
     /**
      * Contains the list of all properties meta data.
      */
-    private final List<MetaEntityPropertyData> properties;
+    private final List<EntityMetaPropertyData> properties;
 
-    public MetaEntityData(Class<T> entityClass, String serviceNamespace, List<MetaEntityPropertyData> properties) {
+    public EntityMetaData(Class<T> entityClass, String serviceNamespace, boolean isEntitySet, List<EntityMetaPropertyData> properties) {
         this.entityClass = entityClass;
 
         //generate values
         this.entityTypeName = this.entityClass.getSimpleName();
-        this.entityTypeSetName = this.entityTypeName + TYPE_SET_SUFFIX;
-        this.entityTypeNameFQ = new FullQualifiedName(serviceNamespace, this.entityClass.getSimpleName());
+        this.isEntitySet = isEntitySet;
+
+        this.entityTypeSetName = (isEntitySet) ? this.entityTypeName + TYPE_SET_SUFFIX : null;
 
         this.properties = properties;
+    }
+
+    public List<EntityMetaPropertyData> getEnumPropertyData() {
+        List<EntityMetaPropertyData> enumPropertyList = new ArrayList<>();
+
+        this.properties.stream().filter((prop) -> (prop.isEnum())).forEachOrdered((prop) -> {
+            enumPropertyList.add(prop);
+        });
+        return enumPropertyList;
     }
 }

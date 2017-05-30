@@ -1,10 +1,9 @@
-package com.bloggingit.odata.olingo.annotation.edm;
+package com.bloggingit.odata.edm.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 
 /**
  * Annotation for definition of an EdmProperty for an EdmEntityType or
@@ -17,20 +16,6 @@ import org.apache.olingo.commons.api.edm.EdmPrimitiveTypeKind;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface EdmProperty {
-
-    /**
-     * Define the EdmSimpleType which is used for the Property in the EDM.
-     * <p>
-     * If not explicit set a default value is String<br>
-     * <br>
-     * If the property is a simple property a EdmSimpleType must be used which
-     * can be mapped to the java type of the annotated field. Which mappings are
-     * available depends on the used implementation.
-     * </p>
-     *
-     * @return type for the Property as used in the EDM
-     */
-    EdmPrimitiveTypeKind type() default EdmPrimitiveTypeKind.String;
 
     /**
      * Define the name for the Property. If not set a default value has to be

@@ -3,6 +3,8 @@ package com.bloggingit.odata.storage;
 import com.bloggingit.odata.model.BaseEntity;
 import com.bloggingit.odata.model.Book;
 import com.bloggingit.odata.exception.EntityDataException;
+import com.bloggingit.odata.model.Author;
+import com.bloggingit.odata.model.Gender;
 import com.bloggingit.odata.olingo.v4.util.ReflectionUtils;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentMap;
 public class InMemoryDataStorage {
 
     private static final ConcurrentMap<Long, BaseEntity> DATA_BOOKS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Long, BaseEntity> DATA_AUTHOR = new ConcurrentHashMap<>();
 
     static {
         LocalDateTime lDate1 = LocalDateTime.of(2011, Month.JULY, 21, 0, 0);
@@ -41,6 +44,18 @@ public class InMemoryDataStorage {
         DATA_BOOKS.put(book1.getId(), book1);
         DATA_BOOKS.put(book2.getId(), book2);
         DATA_BOOKS.put(book3.getId(), book3);
+
+        Author author1 = new Author("Author 1", Gender.MALE);
+        Author author2 = new Author("Author 2", Gender.FEMALE);
+        Author author3 = new Author("Author 3", Gender.UNKOWN);
+
+        author1.setId(1L);
+        author2.setId(2L);
+        author3.setId(3L);
+
+        DATA_AUTHOR.put(author1.getId(), author1);
+        DATA_AUTHOR.put(author2.getId(), author2);
+        DATA_AUTHOR.put(author3.getId(), author3);
     }
 
     @SuppressWarnings("unchecked")
@@ -49,6 +64,8 @@ public class InMemoryDataStorage {
 
         if (Book.class.equals(entityClazz)) {
             entities = (ConcurrentMap<Long, T>) DATA_BOOKS;
+        } else if (Author.class.equals(entityClazz)) {
+            entities = (ConcurrentMap<Long, T>) DATA_AUTHOR;
         }
 
         return entities;

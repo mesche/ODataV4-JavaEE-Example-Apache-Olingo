@@ -1,18 +1,16 @@
-package com.bloggingit.odata.olingo.meta;
+package com.bloggingit.odata.olingo.edm.meta;
 
+import com.bloggingit.odata.edm.enumeration.EdmValueType;
 import com.bloggingit.odata.olingo.v4.util.DefaultValue;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import org.apache.olingo.commons.api.data.ValueType;
 
 /**
  * This class contains the meta data of a entity property for the OData service.
  */
 @Getter
-@AllArgsConstructor
 @Builder
-public class MetaEntityPropertyData {
+public class EntityMetaPropertyData {
 
     /**
      * The name of the OData property.
@@ -37,7 +35,8 @@ public class MetaEntityPropertyData {
     /**
      * The type of the property value.
      */
-    private final ValueType valueType;
+    private final EdmValueType valueType;
+
 
     /**
      * The maximum length of the type in use as Integer.
@@ -83,6 +82,24 @@ public class MetaEntityPropertyData {
      * @return true, if it is a primitive property
      */
     public boolean isPrimitive() {
-        return ValueType.PRIMITIVE.equals(this.valueType);
+        return EdmValueType.PRIMITIVE.equals(this.valueType);
+    }
+
+    /**
+     * Gets the info if the property is a enum property.
+     *
+     * @return true, if it is a enum property
+     */
+    public boolean isEnum() {
+        return EdmValueType.ENUM.equals(this.valueType);
+    }
+
+    /**
+     * Gets the info if the property is a complex property.
+     *
+     * @return true, if it is a complex property
+     */
+    public boolean isComplex() {
+        return EdmValueType.COMPLEX.equals(this.valueType);
     }
 }

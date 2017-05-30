@@ -1,9 +1,9 @@
 package com.bloggingit.odata.model;
 
-import com.bloggingit.odata.olingo.annotation.edm.EdmEntitySet;
-import com.bloggingit.odata.olingo.annotation.edm.EdmEntityType;
-import com.bloggingit.odata.olingo.annotation.edm.EdmFacets;
-import com.bloggingit.odata.olingo.annotation.edm.EdmProperty;
+import com.bloggingit.odata.edm.annotation.EdmEntitySet;
+import com.bloggingit.odata.edm.annotation.EdmEntityType;
+import com.bloggingit.odata.edm.annotation.EdmFacets;
+import com.bloggingit.odata.edm.annotation.EdmProperty;
 import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

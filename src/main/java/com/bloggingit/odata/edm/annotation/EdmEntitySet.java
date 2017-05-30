@@ -1,4 +1,4 @@
-package com.bloggingit.odata.olingo.annotation.edm;
+package com.bloggingit.odata.edm.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
