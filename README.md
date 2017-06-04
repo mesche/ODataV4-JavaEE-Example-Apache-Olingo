@@ -48,6 +48,7 @@ At the moment there is no database connection implemented to provide data for th
 - create new book or author
 - update existing book or author data
 - delete existing book or author data
+- count number of all books or authors data
 
 
 
@@ -164,7 +165,7 @@ Add the optional `format` parameter to the request url, which contains informati
 If the content type is `application/json;odata.metadata=minimal`, then the payload is formatted in JSON.
 The content format can as well be specified via the request header `Accept: application/json;odata.metadata=minimal`.
 
-Internally the `DataCollectionProcessor` implementation of the OData service will be invoked.
+Internally the `DataCollectionProcessor#readEntityCollection` implementation of the OData service will be invoked.
 
 Request:
 
@@ -225,12 +226,35 @@ The expected result is the list of book entries:
 }
 ```
 
+### System Query Option $count
+
+The `$count` query option allows to request a count of the matching resources. The number will be included with the resources in the response. The $count system query option with a value of `true` specifies that the total count of items within a collection matching the request be returned along with the result.
+
+OData V4 Spec Hint: The $count system query option ignores any $top, $skip, or $expand query options, and returns the total count of results across all pages including only those results matching any specified $filter and $search.
+
+**Example**
+
+```
+http://localhost:8080/odatav4-javaee-example-apache-olingo/api/servlet/v1/odatademo.svc/BookSet?$count=true
+```
+
+
+```json
+{
+    "@odata.context": "$metadata#BookSet",
+    "@odata.count": 3,
+    "value":
+    [
+        {
+         ...
+```
+
 
 ## Request: Read Single Book Or Author Entity
 
 This request will display the details of a single book or author entity, which has the corresponding ID.
 
-Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
+Internally the `DataEntityProcessor#readEntity` implementation of the OData service will be invoked.
 
 Request:
 
@@ -267,7 +291,7 @@ The expected result is a response with the details of a single book with the id 
 
 If you don't want to receive the full payload of the entity, you can use this request to receive only the value of the property of the OData model you needed.
 
-Internally the `DataPrimitiveProcessor` or `DataPrimitiveValueProcessor` implementation of the OData service will be invoked.
+Internally the `DataPrimitiveProcessor#readPrimitive` or `DataPrimitiveValueProcessor#readPrimitive` implementation of the OData service will be invoked.
 
 Request:
 
@@ -296,7 +320,7 @@ The expected result is a response with the title value of the book with the id 1
 
 ### Plain Text Value
 
-If you use the `DataPrimitiveValueProcessor` implementation, it is also possible to request only the pure plain text value of a property.
+If you use the `DataPrimitiveValueProcessor#readPrimitiveValue` implementation, it is also possible to request only the pure plain text value of a property.
 
 Request:
 
@@ -325,7 +349,7 @@ Book Title 1
 With this request we can create a new book (with author data) or a new author and add it to the available list.
 The Olingo library takes this request, serializes the request body and invokes the corresponding method of our processor class. 
 
-Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
+Internally the `DataEntityProcessor#createEntity` implementation of the OData service will be invoked.
 
 Request:
 
@@ -422,7 +446,7 @@ With this request we can update the values of an existing book or author. The up
 
 The difference becomes relevant only in case if the user doesn’t send all the properties in the request body.
 
-Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
+Internally the `DataEntityProcessor#updateEntity` implementation of the OData service will be invoked.
 
 Request:
 
@@ -453,11 +477,11 @@ Result:
 The OData service is not expected to return any response payload (HTTP status code to 204 – no content).
 
 
-## Delete Existing Book Or Author
+## Request: Delete Existing Book Or Author
 
 With this request we can remove data record of an existing book or author.
 
-Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
+Internally the `DataEntityProcessor#deleteEntity` implementation of the OData service will be invoked.
 
 Request:
 
@@ -477,6 +501,29 @@ Result:
 The OData service is not expected to return any response payload (HTTP status code to 204 – no content).
 
 
+## Request: Count Number Of All Books Or Authors Data
+
+To request only the number of items of a collection of entities or items of a collection-valued property, create a GET request with `/$count` appended to the resource path of the collection. On success, the response body MUST contain the exact count of items.
+
+Internally the `DataCollectionProcessor#countEntityCollection` implementation of the OData service will be invoked.
+
+
+Request:
+
+```
+PATH:   <serviceroot>/BookSet/$count    or    <serviceroot>/AuthorSet/$count
+METHOD: GET
+```
+
+**Example**
+
+```
+http://localhost:8080/odatav4-javaee-example-apache-olingo/api/servlet/v1/odatademo.svc/BookSet/$count
+```
+
+Result:
+
+The result is a response with the count number of all books.
 
 ----------------------------------
 Markus Eschenbach

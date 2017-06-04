@@ -34,6 +34,7 @@ public class OlingoObjectMapper {
 
     public static <T> EntityCollection mapObjectEntitiesToOlingoEntityCollection(Collection<T> objEntities, EntityMetaData<T> entityMetaData) {
         EntityCollection entityCollection = new EntityCollection();
+        entityCollection.setCount(objEntities.size());
 
         objEntities.forEach((entity) -> {
             entityCollection
