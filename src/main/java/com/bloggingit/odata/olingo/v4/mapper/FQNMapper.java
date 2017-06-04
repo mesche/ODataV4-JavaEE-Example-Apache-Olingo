@@ -2,7 +2,11 @@ package com.bloggingit.odata.olingo.v4.mapper;
 
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
-import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyData;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaProperty;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyComplex;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyEntity;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyEnum;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyPrimitve;
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 
 /**
@@ -24,12 +28,12 @@ public class FQNMapper {
     }
 
 
-    public static FullQualifiedName mapToValueTypeFQN(String serviceNamespace, EntityMetaPropertyData metaProp) {
-        FullQualifiedName typeFQN;
-        if (metaProp.isEnum()) {
+    public static FullQualifiedName mapToPropertyValueTypeFQN(String serviceNamespace, EntityMetaProperty metaProp) {
+        FullQualifiedName typeFQN = null;
+        if (metaProp instanceof EntityMetaPropertyEnum || metaProp instanceof EntityMetaPropertyComplex || metaProp instanceof EntityMetaPropertyEntity) {
             typeFQN = createFullQualifiedName(serviceNamespace, metaProp.getFieldType().getSimpleName());
-        } else {
-            typeFQN = OlingoEnumMapper.mapToEdmPrimTypeKind(metaProp.getFieldType()).getFullQualifiedName();
+        } else if (metaProp instanceof EntityMetaPropertyPrimitve) {
+            typeFQN = OlingoTypeMapper.mapToEdmPrimitiveTypeKind(metaProp.getFieldType()).getFullQualifiedName();
         }
         return typeFQN;
     }

@@ -26,9 +26,6 @@ import org.apache.olingo.server.api.serializer.PrimitiveSerializerOptions;
 import org.apache.olingo.server.api.serializer.SerializerResult;
 import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
-import org.apache.olingo.server.api.uri.UriResource;
-import org.apache.olingo.server.api.uri.UriResourceEntitySet;
-import org.apache.olingo.server.api.uri.UriResourceProperty;
 
 /**
  * This class is invoked by the Apache Olingo framework when the the OData
@@ -57,17 +54,12 @@ public class DataPrimitiveProcessor extends AbstractEntityMetaDataProcessor impl
     public void readPrimitive(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
         // 1. Retrieve info from URI
         // 1.1. retrieve the info about the requested entity set
-        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
-        // Note: only in our example we can rely that the first segment is the EntitySet
-        UriResourceEntitySet uriEntityset = (UriResourceEntitySet) resourceParts.get(0);
-        EdmEntitySet edmEntitySet = uriEntityset.getEntitySet();
+        EdmEntitySet edmEntitySet = getUriResourceEdmEntitySet(uriInfo);
         // the key for the entity
-        List<UriParameter> keyPredicates = uriEntityset.getKeyPredicates();
+        List<UriParameter> keyPredicates = getUriResourceKeyPredicates(uriInfo);
 
         // 1.2. retrieve the requested (Edm) property
-        // the last segment is the Property
-        UriResourceProperty uriProperty = (UriResourceProperty) resourceParts.get(resourceParts.size() - 1);
-        EdmProperty edmProperty = uriProperty.getProperty();
+        EdmProperty edmProperty = getUriResourceEdmProperty(uriInfo);
         String edmPropertyName = edmProperty.getName();
         // in our example, we know we have only primitive types in our model
         EdmPrimitiveType edmPropertyType = (EdmPrimitiveType) edmProperty.getType();

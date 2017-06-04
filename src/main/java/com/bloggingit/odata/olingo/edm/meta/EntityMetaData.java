@@ -35,29 +35,41 @@ public class EntityMetaData<T> {
 
     private final boolean isEntitySet;
 
+    private final boolean isComplexType;
     /**
      * Contains the list of all properties meta data.
      */
-    private final List<EntityMetaPropertyData> properties;
+    private final List<EntityMetaProperty> properties;
 
-    public EntityMetaData(Class<T> entityClass, String serviceNamespace, boolean isEntitySet, List<EntityMetaPropertyData> properties) {
+    public EntityMetaData(Class<T> entityClass, String serviceNamespace, boolean isEntitySet, boolean isComplexType, List<EntityMetaProperty> properties) {
         this.entityClass = entityClass;
 
         //generate values
         this.entityTypeName = this.entityClass.getSimpleName();
         this.isEntitySet = isEntitySet;
+        this.isComplexType = isComplexType;
 
         this.entityTypeSetName = (isEntitySet) ? this.entityTypeName + TYPE_SET_SUFFIX : null;
 
         this.properties = properties;
     }
 
-    public List<EntityMetaPropertyData> getEnumPropertyData() {
-        List<EntityMetaPropertyData> enumPropertyList = new ArrayList<>();
+    public List<EntityMetaProperty> getEnumPropertyData() {
+        List<EntityMetaProperty> enumPropertyList = new ArrayList<>();
 
-        this.properties.stream().filter((prop) -> (prop.isEnum())).forEachOrdered((prop) -> {
+        this.properties.stream().filter((prop) -> (prop instanceof EntityMetaPropertyEnum)).forEachOrdered((prop) -> {
             enumPropertyList.add(prop);
         });
         return enumPropertyList;
     }
+
+    public List<EntityMetaPropertyEntity> getInlineEntityPropertyData() {
+        List<EntityMetaPropertyEntity> inlinePropertyList = new ArrayList<>();
+
+        this.properties.stream().filter((prop) -> (prop instanceof EntityMetaPropertyEntity)).forEachOrdered((prop) -> {
+            inlinePropertyList.add((EntityMetaPropertyEntity) prop);
+        });
+        return inlinePropertyList;
+    }
+
 }

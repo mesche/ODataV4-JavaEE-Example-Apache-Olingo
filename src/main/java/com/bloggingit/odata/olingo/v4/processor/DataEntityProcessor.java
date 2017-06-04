@@ -3,15 +3,18 @@ package com.bloggingit.odata.olingo.v4.processor;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
 import com.bloggingit.odata.olingo.v4.service.OlingoDataService;
-import com.bloggingit.odata.olingo.v4.util.OlingoUtil;
+import com.bloggingit.odata.olingo.v4.util.UriInfoUtil;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.edm.EdmEntitySet;
 import org.apache.olingo.commons.api.edm.EdmEntityType;
+import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.format.ContentType;
 import org.apache.olingo.commons.api.http.HttpMethod;
+import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.OData;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.ODataLibraryException;
@@ -28,6 +31,7 @@ import org.apache.olingo.server.api.uri.UriInfo;
 import org.apache.olingo.server.api.uri.UriParameter;
 import org.apache.olingo.server.api.uri.UriResource;
 import org.apache.olingo.server.api.uri.UriResourceEntitySet;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
 
 /**
  * This class is invoked by the Apache Olingo framework when the the OData
@@ -57,31 +61,75 @@ public class DataEntityProcessor extends AbstractEntityMetaDataProcessor impleme
     @Override
     public void readEntity(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
 
+        Entity responseEntity = null; // required for serialization of the response body
+        EdmEntitySet responseEdmEntitySet = null; // we need this for building the contextUrl
+
         // 1. retrieve the Entity Type
-        List<UriResource> resourcePaths = uriInfo.getUriResourceParts();
-        // Note: only in our example we can assume that the first segment is the EntitySet
-        UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0);
-        EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
+        // can be "normal" read operation, or navigation (to-one)
+        //EdmEntitySet edmEntitySet = getUriResourceEdmEntitySet(uriInfo);
+        List<UriResource> resourceParts = uriInfo.getUriResourceParts();
+        int segmentCount = resourceParts.size();
 
-        // 2. retrieve the data from backend
-        EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(edmEntitySet.getName());
+        UriResource uriResource = resourceParts.get(0);
+        if (!(uriResource instanceof UriResourceEntitySet)) {
+            throw new ODataApplicationException("Only EntitySet is supported", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.ROOT);
+        }
 
-        List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
-        Entity entity = this.dataService.getEntityData(meta, keyPredicates);
+        UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) uriResource;
+        EdmEntitySet startEdmEntitySet = uriResourceEntitySet.getEntitySet();
 
-        // 3. serialize
-        EdmEntityType entityType = edmEntitySet.getEntityType();
+        // Analyze the URI segments
+        if (segmentCount == 1) {  // no navigation
+            responseEdmEntitySet = startEdmEntitySet; // since we have only one segment
 
-        ContextURL contextUrl = ContextURL.with().entitySet(edmEntitySet).build();
-        // expand and select currently not supported
+            // 2. step: retrieve the data from backend
+            List<UriParameter> keyPredicates = getUriResourceKeyPredicates(uriInfo);
+
+            EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(responseEdmEntitySet.getName());
+
+            responseEntity = this.dataService.getEntityData(meta, keyPredicates);
+        } else if (segmentCount == 2) { //navigation
+            UriResource navSegment = resourceParts.get(1);
+
+            if (navSegment instanceof UriResourceNavigation) {
+                UriResourceNavigation uriResourceNavigation = (UriResourceNavigation) navSegment;
+                EdmNavigationProperty edmNavigationProperty = uriResourceNavigation.getProperty();
+
+                responseEdmEntitySet = UriInfoUtil.getNavigationTargetEntitySet(startEdmEntitySet, edmNavigationProperty);
+
+                // 2nd: fetch the data from backend.
+                List<UriParameter> keyPredicates = uriResourceEntitySet.getKeyPredicates();
+
+                EntityMetaData<?> meta = this.entityMetaDataCollection.getEntityMetaDataByTypeSetName(startEdmEntitySet.getName());
+
+                Entity sourceEntity = this.dataService.getEntityData(meta, keyPredicates);
+
+                responseEntity = this.dataService.getRelatedEntity(sourceEntity, uriResourceNavigation);
+            }
+        } else {
+            // this would be the case for e.g. BookSet(1)/author/BookSet(1)/author
+            throw new ODataApplicationException("Not supported", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(), Locale.ROOT);
+        }
+
+        if (responseEntity == null) {
+            throw new ODataApplicationException("Nothing found.", HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ROOT);
+        }
+
+        if (responseEdmEntitySet == null) {
+            throw new ODataApplicationException("EntityType not found.", HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ROOT);
+        }
+
+        // 4. serialize
+        EdmEntityType edmEntityType = responseEdmEntitySet.getEntityType();
+
+        ContextURL contextUrl = ContextURL.with().entitySet(responseEdmEntitySet).suffix(ContextURL.Suffix.ENTITY).build();
         EntitySerializerOptions options = EntitySerializerOptions.with().contextURL(contextUrl).build();
 
         ODataSerializer serializer = odata.createSerializer(responseFormat);
-        SerializerResult serializerResult = serializer.entity(serviceMetadata, entityType, entity, options);
-        InputStream entityStream = serializerResult.getContent();
+        SerializerResult serializerResult = serializer.entity(serviceMetadata, edmEntityType, responseEntity, options);
 
         //4. configure the response object
-        setResponseContentAndOkStatus(response, entityStream, responseFormat);
+        setResponseContentAndOkStatus(response, serializerResult.getContent(), responseFormat);
     }
 
     @Override
@@ -90,7 +138,7 @@ public class DataEntityProcessor extends AbstractEntityMetaDataProcessor impleme
             ContentType requestFormat, ContentType responseFormat) throws ODataApplicationException, ODataLibraryException {
 
         // 1. Retrieve the entity type from the URI
-        EdmEntitySet edmEntitySet = OlingoUtil.getEdmEntitySet(uriInfo);
+        EdmEntitySet edmEntitySet = getUriResourceEdmEntitySet(uriInfo);
         EdmEntityType edmEntityType = edmEntitySet.getEntityType();
 
         // 2. create the data in backend

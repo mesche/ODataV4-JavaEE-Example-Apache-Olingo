@@ -71,13 +71,13 @@ public class EntityMetaDataContainer {
         return entity;
     }
 
-    public EntityMetaPropertyData getEntityMetaPropertyDataByTypeName(String serviceNamespace, String propertyTypeName) {
-        EntityMetaPropertyData propData = null;
+    public EntityMetaProperty getEntityMetaPropertyDataByTypeName(String serviceNamespace, String propertyTypeName) {
+        EntityMetaProperty propData = null;
         if (this.serviceNamespace.equals(serviceNamespace)) {
             for (EntityMetaData<?> meta : this.allEntityMetaData) {
-                List<EntityMetaPropertyData> enumPropertyDataList = meta.getEnumPropertyData();
+                List<EntityMetaProperty> enumPropertyDataList = meta.getEnumPropertyData();
 
-                for (EntityMetaPropertyData propEntry : enumPropertyDataList) {
+                for (EntityMetaProperty propEntry : enumPropertyDataList) {
                     if (propEntry.getFieldType().getSimpleName().equals(propertyTypeName)) {
                         propData = propEntry;
                         break;

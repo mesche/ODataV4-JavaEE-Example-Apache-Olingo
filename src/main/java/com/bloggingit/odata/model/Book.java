@@ -27,11 +27,11 @@ public class Book extends BaseEntity {
     @EdmProperty(facets = @EdmFacets(maxLength = 2000))
     private String description;
 
-    @EdmProperty
-    private Date releaseDate;
+    @EdmProperty(name = "releaseDate")
+    private Date release;
 
-    @EdmProperty(name = "writer")
-    private String author;
+    @EdmProperty
+    private Author author;
 
     @EdmProperty
     private Double price;
@@ -39,7 +39,7 @@ public class Book extends BaseEntity {
     @EdmProperty
     private boolean inStock;
 
-    public void setReleaseDate(Date releaseDate) {
-        this.releaseDate = (releaseDate != null) ? new Date(releaseDate.getTime()) : null;
+    public void setRelease(Date release) {
+        this.release = (release != null) ? new Date(release.getTime()) : null;
     }
 }

@@ -18,35 +18,10 @@ Afterwards the Web Application is deployed on a Java EE server, the OData servic
 
 # Scenario
 
-The OData service in this example will implement the following simple sample model with the `Book` entity.
+The OData service in this example will implement the following simple sample model with the `Book` and `Author` entities.
 
-```java
-@EdmEntityType
-@EdmEntitySet
-public class Book
+![entity-data-model-structure](etc/entity-data-model-structure.png "entity data model structure")
 
-    @EdmKey
-    @EdmProperty(facets = @EdmFacets(nullable = false))
-    private long id;
-
-    @EdmProperty(facets = @EdmFacets(nullable = false))
-    private String title;
-
-    @EdmProperty(facets = @EdmFacets(maxLength = 2000))
-    private String description;
-
-    @EdmProperty
-    private Date releaseDate;
-
-    @EdmProperty(name = "writer")
-    private String author;
-
-    @EdmProperty
-    private Double price;
-
-    @EdmProperty
-    private boolean inStock;
-```
 
 # Custom Entity Annotations
 
@@ -61,13 +36,13 @@ At the moment there is no database connection implemented to provide data for th
 
 - read Service Document
 - read Metadata Document
-- read all book data
-- read single book data
-- read single book property value
-- read single book property value (plain text)
-- create new book data
-- update exisiting book data
-- delete existing book data
+- read all book or author data
+- read single book or author data
+- read single book or author property value
+- read single book or author property value (plain text)
+- create new book or author
+- update existing book or author data
+- delete existing book or author data
 
 
 
@@ -98,11 +73,15 @@ The expected result is the Service Document which displays informations of the e
     "value":
     [
         {
+            "name": "AuthorSet",
+            "url": "AuthorSet"
+        },
+        {
             "name": "BookSet",
             "url": "BookSet"
-            }
-        ]
-    }
+        }
+    ]
+}
 ```
 
 ## Request: Read Metadata Document
@@ -129,31 +108,52 @@ The expected result is the Metadata Document that displays the Schema, EntityTyp
 ```xml
 <?xml version='1.0' encoding='UTF-8'?>
 <edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
-    <edmx:DataServices>
-        <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="OData">
-            <EntityType Name="Book">
-            <Key>
-                <PropertyRef Name="id"/>
-            </Key>
-            <Property Name="title" Type="Edm.String" Nullable="false"/>
-            <Property Name="description" Type="Edm.String" MaxLength="2000"/>
-            <Property Name="releaseDate" Type="Edm.DateTimeOffset"/>
-            <Property Name="writer" Type="Edm.String"/>
-            <Property Name="price" Type="Edm.Double"/>
-            <Property Name="inStock" Type="Edm.Boolean" DefaultValue="false"/>
-            <Property Name="id" Type="Edm.Int64" Nullable="false" DefaultValue="0"/>
-            </EntityType>
-            <EntityContainer Name="Container">
-            <EntitySet Name="BookSet" EntityType="OData.Book"/>
-            </EntityContainer>
-        </Schema>
-    </edmx:DataServices>
+  <edmx:DataServices>
+    <Schema xmlns="http://docs.oasis-open.org/odata/ns/edm" Namespace="OData">
+      <EnumType Name="Gender" IsFlags="false" UnderlyingType="Edm.Int32">
+        <Member Name="MALE" Value="0"/>
+        <Member Name="FEMALE" Value="1"/>
+        <Member Name="UNKOWN" Value="2"/>
+      </EnumType>
+      <EntityType Name="Author">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="name" Type="Edm.String" Nullable="false" DefaultValue="null"/>
+        <Property Name="gender" Type="OData.Gender"/>
+        <Property Name="contactInfo" Type="OData.ContactInfo"/>
+        <Property Name="id" Type="Edm.Int64" Nullable="false" DefaultValue="0"/>
+      </EntityType>
+      <EntityType Name="Book">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="title" Type="Edm.String" Nullable="false" DefaultValue="null"/>
+        <Property Name="description" Type="Edm.String" DefaultValue="null" MaxLength="2000"/>
+        <Property Name="releaseDate" Type="Edm.Date" DefaultValue="null"/>
+        <Property Name="price" Type="Edm.Double" DefaultValue="null"/>
+        <Property Name="inStock" Type="Edm.Boolean" DefaultValue="false"/>
+        <Property Name="id" Type="Edm.Int64" Nullable="false" DefaultValue="0"/>
+        <NavigationProperty Name="author" Type="OData.Author"/>
+      </EntityType>
+      <ComplexType Name="ContactInfo">
+        <Property Name="eMail" Type="Edm.String" Nullable="false" DefaultValue="null"/>
+        <Property Name="phone" Type="Edm.String" DefaultValue="null"/>
+      </ComplexType>
+      <EntityContainer Name="Container">
+        <EntitySet Name="AuthorSet" EntityType="OData.Author"/>
+        <EntitySet Name="BookSet" EntityType="OData.Book">
+          <NavigationPropertyBinding Path="author" Target="AuthorSet"/>
+        </EntitySet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
 </edmx:Edmx>
 ```
 
-## Request: Read Book Entity Collection
+## Request: Read Book Or Author Entity Collection
 
-This request will display a list of books and some properties that describe each book.
+This request will display a list of books or authors and some properties that describe each entity.
 
 Add the optional `format` parameter to the request url, which contains information about the content type that is requested. This means that the user has the choice to receive the data either in XML or in JSON (default).
 If the content type is `application/json;odata.metadata=minimal`, then the payload is formatted in JSON.
@@ -164,7 +164,7 @@ Internally the `DataCollectionProcessor` implementation of the OData service wil
 Request:
 
 ```
-PATH:   <serviceroot>/BookSet
+PATH:   <serviceroot>/BookSet    or    <serviceroot>/AuthorSet
 METHOD: GET
 Header (optional): Accept: application/json;odata.metadata=minimal
 ```
@@ -195,8 +195,7 @@ The expected result is the list of book entries:
         {
             "title": "Book Title 1",
             "description": "This is the description of book 1",
-            "releaseDate": "2011-07-21T00:00:00+02:00",
-            "writer": "Author 1",
+            "releaseDate": "2011-07-21",
             "price": 9.95,
             "inStock": true,
             "id": 1
@@ -204,8 +203,7 @@ The expected result is the list of book entries:
         {
             "title": "Book Title 2",
             "description": "This is the description of book 2",
-            "releaseDate": "2015-08-06T13:15:00+02:00",
-            "writer": "Author 2",
+            "releaseDate": "2015-08-06",
             "price": 5.99,
             "inStock": true,
             "id": 2
@@ -213,8 +211,7 @@ The expected result is the list of book entries:
         {
             "title": "Book Title 3",
             "description": "This is the description of book 3",
-            "releaseDate": "2013-05-12T00:00:00+02:00",
-            "writer": "Author 3",
+            "releaseDate": "2013-05-12",
             "price": 14.5,
             "inStock": false,
             "id": 3
@@ -224,16 +221,16 @@ The expected result is the list of book entries:
 ```
 
 
-## Request: Read Single Book Entity
+## Request: Read Single Book Or Author Entity
 
-This request will display the details of a single book entity, which has the corresponding ID.
+This request will display the details of a single book or author entity, which has the corresponding ID.
 
 Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
 
 Request:
 
 ```
-PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)    or  <serviceroot>/BookSet(id=ID_OF_THE_BOOK)
+PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)    or    <serviceroot>/AuthorSet(id=ID_OF_THE_BOOK)
 METHOD: GET
 Header (optional): Accept: application/json;odata.metadata=minimal
 ```
@@ -251,20 +248,19 @@ The expected result is a response with the details of a single book with the id 
 
 ```json
 {
-    "@odata.context": "$metadata#BookSet",
+    "@odata.context": "$metadata#BookSet/$entity",
     "title": "Book Title 1",
     "description": "This is the description of book 1",
-    "releaseDate": "2011-07-21T00:00:00+02:00",
-    "writer": "Author 1",
+    "releaseDate": "2011-07-21",
     "price": 9.95,
     "inStock": true,
     "id": 1
 }
 ```
 
-## Request: Read Single Book Property
+## Request: Read Single Book or Author Property
 
-If you doesn’t want to receive the full payload of the entity, you can use this request to receive only the value of the property of the OData model you needed.
+If you don't want to receive the full payload of the entity, you can use this request to receive only the value of the property of the OData model you needed.
 
 Internally the `DataPrimitiveProcessor` or `DataPrimitiveValueProcessor` implementation of the OData service will be invoked.
 
@@ -319,9 +315,9 @@ The expected result is a response with only the pure plain text value of the tit
 Book Title 1
 ```
 
-## Request: Create New Book
+## Request: Create New Book Or Author
 
-With this request we can create a new book and add it to the list of the available books.
+With this request we can create a new book (with author data) or a new author and add it to the available list.
 The Olingo library takes this request, serializes the request body and invokes the corresponding method of our processor class. 
 
 Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
@@ -329,13 +325,13 @@ Internally the `DataEntityProcessor` implementation of the OData service will be
 Request:
 
 ```
-PATH:   <serviceroot>/BookSet
+PATH:   <serviceroot>/BookSet    or    <serviceroot>/AuthorSet
 METHOD: POST
 Header: Content-Type: application/json;odata.metadata=minimal
 Body:   JSON data
 ```
 
-**Example**
+**Example - New Book**
 
 ```
 http://localhost:8080/odatav4-javaee-example-apache-olingo/api/servlet/v1/odatademo.svc/BookSet
@@ -347,17 +343,13 @@ Request Body:
 {
     "title": "Book Title New",
     "description": "This is the description of the new book",
-    "releaseDate": "2017-04-21T00:00:00+02:00",
-    "writer": "Author New",
+    "releaseDate": "2017-04-21",
+    "author": {
+        "name": "Author New",
+        "gender": "FEMALE"
+    },
     "price": 11.95,
     "inStock": true
-}
-```
-
-```json
-{
-    "name": "Author New",
-    "gender": "FEMALE"
 }
 ```
 
@@ -367,19 +359,57 @@ The result is a response with the details of the new book with the new assigned 
 
 ```json
 {
+    "@odata.context": "$metadata#BookSet",
     "title": "Book Title New",
     "description": "This is the description of the new book",
-    "releaseDate": "2017-04-21T00:00:00+02:00",
-    "writer": "Author New",
+    "releaseDate": "2017-04-21",
     "price": 11.95,
     "inStock": true,
     "id": 4
 }
 ```
 
-## Request: Update Existing Book
 
-With this request we can update the values of an existing book. The update of an entity can be realized either with a `PUT` or a `PATCH` request.
+**Example - New Author**
+
+```
+http://localhost:8080/odatav4-javaee-example-apache-olingo/api/servlet/v1/odatademo.svc/AuthorSet(1)
+```
+
+Request Body:
+
+```json
+{
+    "name": "Author 5 New",
+    "gender": "MALE",
+    "contactInfo": {
+        "eMail": "author5@test.xyz",
+        "phone": "111/111"
+    }
+}
+```
+
+Result:
+
+The result is a response with the details of the new author with the new assigned id.
+
+```json
+{
+    "@odata.context": "$metadata#AuthorSet",
+    "name": "Author 5 New",
+    "gender": "MALE",
+    "contactInfo":
+    {
+        "eMail": "author5@test.xyz",
+        "phone": "111/111"
+    },
+    "id": 6
+}
+```
+
+## Request: Update Existing Book Or Author
+
+With this request we can update the values of an existing book or author. The update of an entity can be realized either with a `PUT` or a `PATCH` request.
 
 **PUT**: The value of the property is updated in the backend. The value of the other properties is set to null (exception: key properties can never be null).
 
@@ -392,7 +422,7 @@ Internally the `DataEntityProcessor` implementation of the OData service will be
 Request:
 
 ```
-PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)
+PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)    or    <serviceroot>/AuthorSet(ID_OF_THE_AUTHOR)
 METHOD: PUT or PATCH
 Header: Content-Type: application/json;odata.metadata=minimal
 Body:   JSON data
@@ -409,8 +439,7 @@ Request Body:
 ```json
 {
     "title": "Book Title 2 Updated",
-    "description": "This is the description of book 2 Updated",
-    "writer": "Author 2 Updated"
+    "description": "This is the description of book 2 Updated"
 }
 ```
 
@@ -419,16 +448,16 @@ Result:
 The OData service is not expected to return any response payload (HTTP status code to 204 – no content).
 
 
-## Delete Existing Book
+## Delete Existing Book Or Author
 
-With this request we can remove data record of an existing book.
+With this request we can remove data record of an existing book or author.
 
 Internally the `DataEntityProcessor` implementation of the OData service will be invoked.
 
 Request:
 
 ```
-PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)
+PATH:   <serviceroot>/BookSet(ID_OF_THE_BOOK)    or    <serviceroot>/AuthorSet(ID_OF_THE_AUTHOR)
 METHOD: DELETE
 ```
 

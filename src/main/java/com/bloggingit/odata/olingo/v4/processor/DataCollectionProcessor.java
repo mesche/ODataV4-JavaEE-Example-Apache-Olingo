@@ -2,9 +2,7 @@ package com.bloggingit.odata.olingo.v4.processor;
 
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
-import com.bloggingit.odata.olingo.v4.callback.ODataErrorCallback;
 import com.bloggingit.odata.olingo.v4.service.OlingoDataService;
-import java.util.List;
 
 import org.apache.olingo.commons.api.data.ContextURL;
 import org.apache.olingo.commons.api.data.EntityCollection;
@@ -22,8 +20,6 @@ import org.apache.olingo.server.api.serializer.ODataSerializer;
 import org.apache.olingo.server.api.serializer.SerializerException;
 import org.apache.olingo.server.api.serializer.SerializerResult;
 import org.apache.olingo.server.api.uri.UriInfo;
-import org.apache.olingo.server.api.uri.UriResource;
-import org.apache.olingo.server.api.uri.UriResourceEntitySet;
 
 /**
  * This class is invoked by the Apache Olingo framework when the the OData
@@ -54,9 +50,7 @@ public class DataCollectionProcessor extends AbstractEntityMetaDataProcessor imp
     public void readEntityCollection(ODataRequest request, ODataResponse response, UriInfo uriInfo, ContentType responseFormat) throws ODataApplicationException, SerializerException {
 
         // 1st we have retrieve the requested EntitySet from the uriInfo object (representation of the parsed service URI)
-        List<UriResource> resourcePaths = uriInfo.getUriResourceParts();
-        UriResourceEntitySet uriResourceEntitySet = (UriResourceEntitySet) resourcePaths.get(0); // the first segment is the EntitySet
-        EdmEntitySet edmEntitySet = uriResourceEntitySet.getEntitySet();
+       EdmEntitySet edmEntitySet = getUriResourceEdmEntitySet(uriInfo);
 
         // 2nd: fetch the data from backend for this requested EntitySetName 
         // it has to be delivered as EntitySet object
@@ -76,7 +70,6 @@ public class DataCollectionProcessor extends AbstractEntityMetaDataProcessor imp
                 = EntityCollectionSerializerOptions
                         .with()
                         .id(id)
-                        .writeContentErrorCallback(new ODataErrorCallback())
                         .contextURL(contextUrl)
                         .build();
         SerializerResult serializedContent = serializer.entityCollection(serviceMetadata, edmEntityType, entitySet, opts);

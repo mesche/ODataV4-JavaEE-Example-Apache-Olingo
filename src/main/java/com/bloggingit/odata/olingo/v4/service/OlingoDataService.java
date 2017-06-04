@@ -4,8 +4,7 @@ import com.bloggingit.odata.model.BaseEntity;
 import com.bloggingit.odata.exception.EntityDataException;
 import com.bloggingit.odata.olingo.v4.mapper.OlingoObjectMapper;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
-import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyData;
-import com.bloggingit.odata.olingo.v4.mapper.OlingoPropertyMapper;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaProperty;
 import com.bloggingit.odata.storage.InMemoryDataStorage;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -16,11 +15,14 @@ import javax.ejb.LocalBean;
 import javax.ejb.Stateless;
 import org.apache.olingo.commons.api.data.Entity;
 import org.apache.olingo.commons.api.data.EntityCollection;
+import org.apache.olingo.commons.api.data.Link;
 import org.apache.olingo.commons.api.data.Property;
+import org.apache.olingo.commons.api.edm.EdmNavigationProperty;
 import org.apache.olingo.commons.api.http.HttpMethod;
 import org.apache.olingo.commons.api.http.HttpStatusCode;
 import org.apache.olingo.server.api.ODataApplicationException;
 import org.apache.olingo.server.api.uri.UriParameter;
+import org.apache.olingo.server.api.uri.UriResourceNavigation;
 
 /**
  * This service provides the methods for the OData service to read and store
@@ -44,7 +46,7 @@ public class OlingoDataService implements Serializable {
     public <T> Entity getEntityData(EntityMetaData<T> entityMetaData, List<UriParameter> keyParams) {
         long id = Long.parseLong(keyParams.get(0).getText());
         T baseEntity = InMemoryDataStorage.getDataByClassAndId(entityMetaData.getEntityClass(), id);
-        return (baseEntity != null) ? OlingoObjectMapper.mapObjEntityToOlingoEntity(baseEntity, entityMetaData) : null;
+        return (baseEntity != null) ? OlingoObjectMapper.mapObjEntityToOlingoEntity(entityMetaData, baseEntity) : null;
     }
 
     @SuppressWarnings("unchecked")
@@ -65,7 +67,21 @@ public class OlingoDataService implements Serializable {
                     HttpStatusCode.NOT_FOUND.getStatusCode(), Locale.ENGLISH, ex);
         }
 
-        return OlingoObjectMapper.mapObjEntityToOlingoEntity(newBaseEntity, entityMetaData);
+        return OlingoObjectMapper.mapObjEntityToOlingoEntity(entityMetaData, newBaseEntity);
+    }
+
+    public Entity getRelatedEntity(Entity entity, UriResourceNavigation navigationResource)
+            throws ODataApplicationException {
+
+        final EdmNavigationProperty edmNavigationProperty = navigationResource.getProperty();
+
+        //if (edmNavigationProperty.isCollection()) {
+        //    return Util.findEntity(edmNavigationProperty.getType(), getRelatedEntityCollection(entity, navigationResource),
+        //            navigationResource.getKeyPredicates());
+        //} else {
+        final Link link = entity.getNavigationLink(edmNavigationProperty.getName());
+        return link == null ? null : link.getInlineEntity();
+        // }
     }
 
     public void updateEntityData(EntityMetaData<?> entityMetaData, List<UriParameter> keyParams, Entity entity, HttpMethod httpMethod) throws ODataApplicationException {
@@ -78,24 +94,20 @@ public class OlingoDataService implements Serializable {
         //in case of PUT, the existing property is set to null
         boolean nullableUnkownProperties = (httpMethod.equals(HttpMethod.PUT));
 
-        List<EntityMetaPropertyData> metaProperties = entityMetaData.getProperties();
-
+        List<EntityMetaProperty> metaProperties = entityMetaData.getProperties();
 
         metaProperties.forEach((metaProp) -> {
-            Property newProperty = entity.getProperty(metaProp.getName());
+            Property newProperty = entity.getProperty(metaProp.getEdmName());
 
-            // the request payload might not consider ALL properties, so it can be null
             if (newProperty != null && !metaProp.isKey()) {
-
-                Object val = OlingoPropertyMapper.mapOlingoPropertyToObjPropertyValue(newProperty, metaProp.getFieldType());
-
+                Object val = OlingoObjectMapper.mapOlingoPropertyToObjValue(newProperty, metaProp);
                 newPropertiesAndValues.put(metaProp.getFieldName(), val);
             } else if (nullableUnkownProperties && !metaProp.isKey()) {
                 // if a property has NOT been added to the request payload
                 // depending on the HttpMethod, our behavior is different
                 // in case of PUT, the existing property is set to null
                 // in case of PATCH, the existing property is not touched, do nothing
-                newPropertiesAndValues.put(metaProp.getName(), metaProp.getDefaultValue());
+                newPropertiesAndValues.put(metaProp.getFieldName(), metaProp.getDefaultValue());
             }
         });
 

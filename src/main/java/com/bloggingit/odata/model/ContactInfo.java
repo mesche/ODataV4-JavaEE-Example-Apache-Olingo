@@ -1,7 +1,6 @@
 package com.bloggingit.odata.model;
 
-import com.bloggingit.odata.edm.annotation.EdmEntitySet;
-import com.bloggingit.odata.edm.annotation.EdmEntityType;
+import com.bloggingit.odata.edm.annotation.EdmComplexType;
 import com.bloggingit.odata.edm.annotation.EdmFacets;
 import com.bloggingit.odata.edm.annotation.EdmProperty;
 import lombok.AllArgsConstructor;
@@ -16,16 +15,12 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 
-@EdmEntityType
-@EdmEntitySet
-public class Author extends BaseEntity {
+@EdmComplexType
+public class ContactInfo {
 
     @EdmProperty(facets = @EdmFacets(nullable = false))
-    private String name;
+    private String eMail;
 
-    @EdmProperty(facets = @EdmFacets(nullable = false))
-    private Gender gender;
-
-    @EdmProperty(facets = @EdmFacets(nullable = false))
-    private ContactInfo contactInfo;
+    @EdmProperty
+    private String phone;
 }

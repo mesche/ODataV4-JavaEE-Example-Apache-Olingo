@@ -3,24 +3,25 @@ package com.bloggingit.odata.olingo.v4.provider;
 import com.bloggingit.odata.olingo.v4.mapper.OlingoObjectMapper;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaData;
 import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataContainer;
-import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataFactory;
-import com.bloggingit.odata.olingo.edm.meta.EntityMetaPropertyData;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaDataBuilder;
+import com.bloggingit.odata.olingo.edm.meta.EntityMetaProperty;
 import com.bloggingit.odata.olingo.v4.factory.OlingoObjectFactory;
 import com.bloggingit.odata.olingo.v4.mapper.FQNMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import lombok.Getter;
 
 import org.apache.olingo.commons.api.edm.FullQualifiedName;
 import org.apache.olingo.commons.api.edm.provider.CsdlAbstractEdmProvider;
+import org.apache.olingo.commons.api.edm.provider.CsdlComplexType;
 import org.apache.olingo.commons.api.edm.provider.CsdlEntityContainer;
 import org.apache.olingo.commons.api.edm.provider.CsdlEntityContainerInfo;
 import org.apache.olingo.commons.api.edm.provider.CsdlEntitySet;
 import org.apache.olingo.commons.api.edm.provider.CsdlEntityType;
 import org.apache.olingo.commons.api.edm.provider.CsdlEnumType;
 import org.apache.olingo.commons.api.edm.provider.CsdlSchema;
+import org.apache.olingo.commons.api.edm.provider.CsdlStructuralType;
 import org.apache.olingo.commons.api.ex.ODataException;
 
 /**
@@ -33,27 +34,31 @@ public class AnnotationEdmProvider extends CsdlAbstractEdmProvider {
     private final EntityMetaDataContainer entityMetaDataContainer;
 
     public AnnotationEdmProvider(String serviceNamespace, String edmContainer, String dtoPackage) {
-
-        Set<EntityMetaData<?>> metaEntities = EntityMetaDataFactory
-                .createEntityMetaDataList(dtoPackage, serviceNamespace);
-
-        this.entityMetaDataContainer = new EntityMetaDataContainer(serviceNamespace, edmContainer, metaEntities);
+        this.entityMetaDataContainer = EntityMetaDataBuilder.createContainer(serviceNamespace, edmContainer, dtoPackage);
     }
 
     @Override
     public List<CsdlSchema> getSchemas() {
         List<CsdlEntityType> entityTypes = new ArrayList<>();
         List<CsdlEnumType> enumTypes = new ArrayList<>();
+        List<CsdlComplexType> complexTypes = new ArrayList<>();
+
+        String serviceNamespace = this.entityMetaDataContainer.getServiceNamespace();
 
         this.entityMetaDataContainer.getAllEntityMetaData().forEach((meta) -> {
-            CsdlEntityType csdlEntityType = OlingoObjectMapper.mapEntityMetaDataToCsdlEntityType(meta, this.entityMetaDataContainer.getServiceNamespace());
+            CsdlStructuralType structuralType = OlingoObjectMapper.mapEntityMetaDataToCsdlStructuralType(meta, serviceNamespace);
 
-            entityTypes.add(csdlEntityType);
+            if (structuralType instanceof CsdlComplexType) {
+                complexTypes.add((CsdlComplexType) structuralType);
+            } else {
+                entityTypes.add((CsdlEntityType) structuralType);
+            }
 
-            enumTypes.addAll(OlingoObjectFactory.createEnumTypeList(meta));
+            enumTypes.addAll(OlingoObjectMapper.mapEntityMetaDataToCsdlEnumTypeList(meta));
         });
 
-        CsdlSchema schema = OlingoObjectFactory.createCsdlSchema(this.entityMetaDataContainer.getServiceNamespace(), getEntityContainer(), entityTypes, enumTypes);
+        CsdlSchema schema = OlingoObjectFactory
+                .createCsdlSchema(serviceNamespace, getEntityContainer(), entityTypes, enumTypes, complexTypes);
 
         return Arrays.asList(schema);
     }
@@ -65,11 +70,12 @@ public class AnnotationEdmProvider extends CsdlAbstractEdmProvider {
         if (enumTypeNameFQ != null
                 && this.entityMetaDataContainer.getServiceNamespace().equals(enumTypeNameFQ.getNamespace())) {
 
-            EntityMetaPropertyData propertyData = this.entityMetaDataContainer.getEntityMetaPropertyDataByTypeName(enumTypeNameFQ.getNamespace(), enumTypeNameFQ.getName());
+            EntityMetaProperty propertyData = this.entityMetaDataContainer.getEntityMetaPropertyDataByTypeName(enumTypeNameFQ.getNamespace(), enumTypeNameFQ.getName());
 
-            Class<Enum> enumFieldType = (Class<Enum>) propertyData.getFieldType();
-
-            csdlEnumType = OlingoObjectFactory.createEnumType(enumFieldType);
+            if (propertyData != null) {
+                Class<Enum> enumFieldType = (Class<Enum>) propertyData.getFieldType();
+                csdlEnumType = OlingoObjectFactory.createEnumType(enumFieldType);
+            }
         }
 
         return csdlEnumType;
@@ -79,9 +85,7 @@ public class AnnotationEdmProvider extends CsdlAbstractEdmProvider {
     public CsdlEntityType getEntityType(FullQualifiedName entityTypeNameFQ) {
         EntityMetaData<?> metaData = this.entityMetaDataContainer.getEntityMetaDataByTypeName(entityTypeNameFQ.getNamespace(), entityTypeNameFQ.getName());
 
-        CsdlEntityType entityType = OlingoObjectMapper.mapEntityMetaDataToCsdlEntityType(metaData, this.entityMetaDataContainer.getServiceNamespace());
-
-        return entityType;
+        return (CsdlEntityType) OlingoObjectMapper.mapEntityMetaDataToCsdlStructuralType(metaData, this.entityMetaDataContainer.getServiceNamespace());
     }
 
     @Override
@@ -100,6 +104,18 @@ public class AnnotationEdmProvider extends CsdlAbstractEdmProvider {
 
         return entitySet;
     }
+
+    @Override
+    public CsdlComplexType getComplexType(FullQualifiedName complexTypeNameFQ) throws ODataException {
+        EntityMetaData<?> metaData = this.entityMetaDataContainer.getEntityMetaDataByTypeName(complexTypeNameFQ.getNamespace(), complexTypeNameFQ.getName());
+
+        if (metaData.isComplexType()) {
+            return (CsdlComplexType) OlingoObjectMapper.mapEntityMetaDataToCsdlStructuralType(metaData, this.entityMetaDataContainer.getServiceNamespace());
+        } else {
+            return null;
+        }
+    }
+
 
     @Override
     public CsdlEntityContainer getEntityContainer() {
