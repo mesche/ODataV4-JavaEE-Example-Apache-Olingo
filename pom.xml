@@ -41,14 +41,6 @@
 		</dependency>
 		<!-- *** JavaEE *** -->
 
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>1.16.16</version>
-			<scope>provided</scope>
-		</dependency>
-
-
 		<!-- *** Apache Commons *** -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
