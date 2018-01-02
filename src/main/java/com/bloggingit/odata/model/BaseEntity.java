@@ -17,5 +17,5 @@ public abstract class BaseEntity {
 
     @EdmKey
     @EdmProperty(facets = @EdmFacets(nullable = false))
-    private String id;
+    private long id;
 }
