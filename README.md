@@ -16,9 +16,9 @@ Visit my blog for more background informations about this project.
 - Java 1.8
 - Java EE
 - Maven
-- Apache TomEE
+- Wildfly
 - HTTP Web-Servlet
-- Apache Olingo 4.3.0 (2016-09-19)
+- Apache Olingo 4.4.0 (2017-09-05)
 
 
 # Scenario
@@ -529,3 +529,5 @@ The result is a response with the count number of all books.
 Markus Eschenbach
 [www.blogging-it.com](http://www.blogging-it.com)
 
+Werner Keil
+[www.catmedia.site](http://www.catmedia.site)
