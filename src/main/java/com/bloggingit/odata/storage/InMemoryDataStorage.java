@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class InMemoryDataStorage {
 
-    private static final ConcurrentMap<Long, Book> DATA_BOOKS = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<Long, Author> DATA_AUTHOR = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, Book> DATA_BOOKS = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, Author> DATA_AUTHOR = new ConcurrentHashMap<>();
 
     static {
         createAuthorList();
@@ -38,13 +38,13 @@ public class InMemoryDataStorage {
         Date date2 = Date.from(lDate2.atZone(ZoneId.systemDefault()).toInstant());
         Date date3 = Date.from(lDate3.atZone(ZoneId.systemDefault()).toInstant());
 
-        Book book1 = new Book("Book Title 1", "This is the description of book 1", date1, DATA_AUTHOR.get(1L), 9.95, true);
-        Book book2 = new Book("Book Title 2", "This is the description of book 2", date2, DATA_AUTHOR.get(2L), 5.99, true);
-        Book book3 = new Book("Book Title 3", "This is the description of book 3", date3, DATA_AUTHOR.get(3L), 14.50, false);
+        Book book1 = new Book("Book Title 1", "This is the description of book 1", date1, DATA_AUTHOR.get("1"), 9.95, true);
+        Book book2 = new Book("Book Title 2", "This is the description of book 2", date2, DATA_AUTHOR.get("2"), 5.99, true);
+        Book book3 = new Book("Book Title 3", "This is the description of book 3", date3, DATA_AUTHOR.get("3"), 14.50, false);
 
-        book1.setId(1L);
-        book2.setId(2L);
-        book3.setId(3L);
+        book1.setId("'A1'");
+        book2.setId("'B2'");
+        book3.setId("'C3'");
 
         DATA_BOOKS.put(book1.getId(), book1);
         DATA_BOOKS.put(book2.getId(), book2);
@@ -56,9 +56,9 @@ public class InMemoryDataStorage {
         Author author2 = new Author("Author 2", Gender.FEMALE, new ContactInfo("author2@test.xyz", "654/321"));
         Author author3 = new Author("Author 3", Gender.UNKOWN, new ContactInfo("author3@test.xyz", null));
 
-        author1.setId(1L);
-        author2.setId(2L);
-        author3.setId(3L);
+        author1.setId("1");
+        author2.setId("2");
+        author3.setId("3");
 
         DATA_AUTHOR.put(author1.getId(), author1);
         DATA_AUTHOR.put(author2.getId(), author2);
@@ -66,32 +66,32 @@ public class InMemoryDataStorage {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ConcurrentMap<Long, T> getDataMapByEntityClass(Class<T> entityClazz) {
-        ConcurrentMap<Long, T> entities = null;
+    private static <T> ConcurrentMap<String, T> getDataMapByEntityClass(Class<T> entityClazz) {
+        ConcurrentMap<String, T> entities = null;
 
         if (Book.class.equals(entityClazz)) {
-            entities = (ConcurrentMap<Long, T>) DATA_BOOKS;
+            entities = (ConcurrentMap<String, T>) DATA_BOOKS;
         } else if (Author.class.equals(entityClazz)) {
-            entities = (ConcurrentMap<Long, T>) DATA_AUTHOR;
+            entities = (ConcurrentMap<String, T>) DATA_AUTHOR;
         }
 
         return entities;
     }
 
     public static <T> List<T> getDataListByBaseEntityClass(Class<T> entityClazz) {
-        final ConcurrentMap<Long, T> entityMap = getDataMapByEntityClass(entityClazz);
+        final ConcurrentMap<String, T> entityMap = getDataMapByEntityClass(entityClazz);
 
         return new ArrayList<>(entityMap.values());
     }
 
-    public static <T> T getDataByClassAndId(Class<T> entityClazz, long id) {
-        final ConcurrentMap<Long, T> entityMap = getDataMapByEntityClass(entityClazz);
+    public static <T> T getDataByClassAndId(Class<T> entityClazz, String id) {
+        final ConcurrentMap<String, T> entityMap = getDataMapByEntityClass(entityClazz);
 
         return entityMap.get(id);
     }
 
-    public static <T> void deleteDataByClassAndId(Class<T> entityClazz, long id) {
-        final ConcurrentMap<Long, T> entityMap = getDataMapByEntityClass(entityClazz);
+    public static <T> void deleteDataByClassAndId(Class<T> entityClazz, String id) {
+        final ConcurrentMap<String, T> entityMap = getDataMapByEntityClass(entityClazz);
         entityMap.remove(id);
     }
 
@@ -105,7 +105,7 @@ public class InMemoryDataStorage {
             if (newEntity instanceof Book) {
                 Author author = ((Book) newEntity).getAuthor();
                 if (author != null) {
-                    if (author.getId() > 0) {
+                    if ("".equals(author.getId())) {
                         author = (Author) getDataByClassAndId(newEntity.getClass(), author.getId());
                     } else {
                         author = createEntity(author);
@@ -115,12 +115,12 @@ public class InMemoryDataStorage {
             }
 
             @SuppressWarnings("unchecked")
-            final ConcurrentMap<Long, T> entityMap = getDataMapByEntityClass((Class<T>) newEntity.getClass());
+            final ConcurrentMap<String, T> entityMap = getDataMapByEntityClass((Class<T>) newEntity.getClass());
 
             BaseEntity baseEntity = (BaseEntity) newEntity;
 
-            if (baseEntity.getId() == 0 || entityMap.putIfAbsent(baseEntity.getId(), newEntity) == null) {
-                baseEntity.setId(entityMap.size() + 1);
+            if ("".equals(baseEntity.getId()) || entityMap.putIfAbsent(baseEntity.getId(), newEntity) == null) {
+                baseEntity.setId("" + entityMap.size() + 1);
                 entityMap.put(baseEntity.getId(), newEntity);
             } else {
                 throw new EntityDataException("Could not create entity, because it already exists");
@@ -133,11 +133,11 @@ public class InMemoryDataStorage {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T updateEntity(Class<T> entityClazz, long id, Map<String, Object> newPropertyValues, boolean nullableUnkownProperties) throws EntityDataException {
+    public static <T> T updateEntity(Class<T> entityClazz, String id, Map<String, Object> newPropertyValues, boolean nullableUnkownProperties) throws EntityDataException {
         T updatedEntity = null;
 
         if (BaseEntity.class.isAssignableFrom(entityClazz)) {
-            final ConcurrentMap<Long, BaseEntity> entityMap = (ConcurrentMap<Long, BaseEntity>) getDataMapByEntityClass(entityClazz);
+            final ConcurrentMap<String, BaseEntity> entityMap = (ConcurrentMap<String, BaseEntity>) getDataMapByEntityClass(entityClazz);
 
             BaseEntity baseEntity = entityMap.get(id);
 

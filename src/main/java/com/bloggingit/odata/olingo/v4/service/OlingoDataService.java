@@ -44,14 +44,14 @@ public class OlingoDataService implements Serializable {
     }
 
     public <T> Entity getEntityData(EntityMetaData<T> entityMetaData, List<UriParameter> keyParams) {
-        long id = Long.parseLong(keyParams.get(0).getText());
+        String id = keyParams.get(0).getText();
         T baseEntity = InMemoryDataStorage.getDataByClassAndId(entityMetaData.getEntityClass(), id);
         return (baseEntity != null) ? OlingoObjectMapper.mapObjEntityToOlingoEntity(entityMetaData, baseEntity) : null;
     }
 
     @SuppressWarnings("unchecked")
     public void deleteEntityData(Class<?> entityClass, List<UriParameter> keyParams) {
-        long id = Long.parseLong(keyParams.get(0).getText());
+    	 String id = keyParams.get(0).getText();
 
         InMemoryDataStorage.deleteDataByClassAndId((Class<BaseEntity>) entityClass, id);
     }
@@ -85,7 +85,7 @@ public class OlingoDataService implements Serializable {
     }
 
     public void updateEntityData(EntityMetaData<?> entityMetaData, List<UriParameter> keyParams, Entity entity, HttpMethod httpMethod) throws ODataApplicationException {
-        long id = Long.parseLong(keyParams.get(0).getText());
+        String id = keyParams.get(0).getText();
 
         Map<String, Object> newPropertiesAndValues = new HashMap<>();
 
