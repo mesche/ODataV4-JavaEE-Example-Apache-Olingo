@@ -29,6 +29,7 @@
 
 		<version.javaee.api>7.0</version.javaee.api>
 		<odata.version>4.4.0</odata.version>
+		 <lombok.version>1.16.18</lombok.version>
 	</properties>
 
 	<dependencies>
@@ -40,7 +41,13 @@
 			<scope>provided</scope>
 		</dependency>
 		<!-- *** JavaEE *** -->
-
+		
+  <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+    </dependency>
+    
 		<!-- *** Apache Commons *** -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -124,7 +131,7 @@
 				<plugin>
 					<groupId>org.projectlombok</groupId>
 					<artifactId>lombok-maven-plugin</artifactId>
-					<version>1.16.6.1</version>
+					<version>${lombok.version}</version>
 					<executions>
 						<execution>
 							<phase>generate-sources</phase>
