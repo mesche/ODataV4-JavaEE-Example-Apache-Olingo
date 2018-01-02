@@ -6,7 +6,7 @@
 
 	<groupId>com.bloggingit</groupId>
 	<artifactId>odatav4-javaee-example-apache-olingo</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.0</version>
 
 	<packaging>war</packaging>
 
